@@ -209,8 +209,16 @@ func (p *cockroach) DumpSchema(w io.Writer) error {
 	cmd := exec.Command("cockroach", "sql", "-e", "SHOW CREATE ALL TABLES", "-d", p.Details().Database, "--format", "raw")
 
 	c := p.ConnectionDetails
-	if defaults.String(c.Options["sslmode"], "disable") == "disable" || strings.Contains(c.RawOptions, "sslmode=disable") {
-		cmd.Args = append(cmd.Args, "--insecure")
+	if c.URL == "" {
+		if defaults.String(c.Options["sslmode"], "disable") == "disable" || strings.Contains(c.RawOptions, "sslmode=disable") {
+			cmd.Args = append(cmd.Args, "--insecure")
+		}
+		cmd.Args = append(cmd.Args, "--host", c.Host, "--port", c.Port, "--user", c.User)
+	} else {
+		if strings.Contains(c.URL, "sslmode=disable") {
+			cmd.Args = append(cmd.Args, "--insecure")
+		}
+		cmd.Args = append(cmd.Args, "--url", c.URL)
 	}
 	return cockroachDumpSchema(p.Details(), cmd, w)
 }
